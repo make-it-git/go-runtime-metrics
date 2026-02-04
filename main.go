@@ -106,7 +106,6 @@ func gcPressure(w http.ResponseWriter, _ *http.Request) {
 			for i := 0; i < 500_000; i++ {
 				_ = make([]byte, 1024*1024) // short-lived garbage, escapes to heap
 			}
-			time.Sleep(time.Millisecond)
 		}
 	}()
 
