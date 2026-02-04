@@ -3,9 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"runtime"
 	"runtime/metrics"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,13 +18,14 @@ var (
 		},
 		[]string{"name"},
 	)
-	schedLatencies = prometheus.NewHistogramVec(
+	schedLatencies = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "go_sched_latencies_seconds",
-			Help:    "Distribution of goroutine scheduler latencies.",
-			Buckets: prometheus.DefBuckets, // Or custom: []float64{0.0001, 0.001, 0.01, 0.1, 1},
+			Namespace: "go",
+			Subsystem: "scheduler",
+			Name:      "latency_seconds",
+			Help:      "Time goroutines spend waiting to be scheduled.",
+			Buckets:   prometheus.ExponentialBuckets(1e-6, 2, 20),
 		},
-		nil,
 	)
 )
 
@@ -37,8 +36,11 @@ func init() {
 
 func pollRuntimeMetrics() {
 	ticker := time.NewTicker(time.Second)
-	samples := make([]metrics.Sample, 1)
-	samples[0].Name = "/sched/latencies:seconds"
+	defer ticker.Stop()
+
+	samples := []metrics.Sample{
+		{Name: "/sched/latencies:seconds"},
+	}
 
 	for range ticker.C {
 		metrics.Read(samples)
@@ -46,15 +48,12 @@ func pollRuntimeMetrics() {
 		for _, s := range samples {
 			if s.Value.Kind() == metrics.KindFloat64Histogram {
 				hist := s.Value.Float64Histogram()
-
-				schedLatencies.Reset()
-
 				totalCount := float64(len(hist.Counts))
 				for i, count := range hist.Counts {
 					if count > 0 {
 						sampleCount := float64(count) / totalCount
 						for j := 0; j < int(sampleCount); j++ {
-							schedLatencies.With(nil).Observe(hist.Buckets[i])
+							schedLatencies.Observe(hist.Buckets[i])
 						}
 					}
 				}
@@ -72,7 +71,6 @@ func main() {
 	http.HandleFunc("/gc-pressure", gcPressure)
 	http.HandleFunc("/memory-growth", memoryGrowth)
 	http.HandleFunc("/alloc-churn", allocChurn)
-	http.HandleFunc("/cpu-blocking", cpuBlocking)
 	http.HandleFunc("/syscall-pressure", syscallPressure)
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -136,53 +134,27 @@ func memoryGrowth(w http.ResponseWriter, _ *http.Request) {
 func allocChurn(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("alloc_churn").Set(1)
 
+	var globalSink *[]byte
+	_ = globalSink
+
 	go func() {
 		for {
-			buf := make([]byte, 1_000)
-			_ = buf
+			buf := make([]byte, 1_000) // moved to heap: buf; go build -gcflags="-m"
+			globalSink = &buf
 		}
 	}()
 
 	w.Write([]byte("started allocation churn\n"))
 }
 
-// 5. CPU block
-// curl localhost:8080/cpu-blocking
-func cpuBlocking(w http.ResponseWriter, _ *http.Request) {
-	mode.WithLabelValues("cpu_blocking").Set(1)
-
-	runtime.GOMAXPROCS(1)
-	var mu sync.Mutex
-
-	go func() {
-		for {
-			mu.Lock()
-			time.Sleep(200 * time.Millisecond)
-			mu.Unlock()
-		}
-	}()
-
-	go func() {
-		for {
-			go func() {
-				mu.Lock()
-				mu.Unlock()
-			}()
-			time.Sleep(5 * time.Millisecond)
-		}
-	}()
-
-	w.Write([]byte("started CPU blocking\n"))
-}
-
-// 6. Syscall pressure
+// 5. Syscall pressure
 func syscallPressure(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("syscall_pressure").Set(1)
 
 	go func() {
-		for i := 0; i < 1000; i++ { // Spawn 1000 blocking goroutines
+		for i := 0; i < 1000; i++ {
 			go func() {
-				for { // Infinite loop per goroutine
+				for {
 					time.Sleep(100 * time.Millisecond)
 				}
 			}()
