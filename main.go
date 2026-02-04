@@ -96,15 +96,34 @@ func leakGoroutines(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte("started goroutine leak\n"))
 }
 
+type Node struct {
+	next *Node
+	data []byte
+}
+
+func allocChain(n int) *Node {
+	var head *Node
+	for i := 0; i < n; i++ {
+		head = &Node{
+			next: head,
+			data: make([]byte, 1024),
+		}
+	}
+	return head
+}
+
 // 2. GC pause pressure (many short-lived allocations)
 // curl localhost:8080/gc-pressure
 func gcPressure(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("gc_pressure").Set(1)
 
+	var roots []*Node
+
 	go func() {
 		for {
-			for i := 0; i < 500_000; i++ {
-				_ = make([]byte, 1024*1024) // short-lived garbage, escapes to heap
+			roots = append(roots, allocChain(100_000))
+			if len(roots) > 10 {
+				roots = roots[:0]
 			}
 		}
 	}()
