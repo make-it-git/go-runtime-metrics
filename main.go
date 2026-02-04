@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"runtime/metrics"
 	"sync"
 	"time"
 
@@ -19,10 +20,52 @@ var (
 		},
 		[]string{"name"},
 	)
+	schedLatencies = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "go_sched_latencies_seconds",
+			Help:    "Distribution of goroutine scheduler latencies.",
+			Buckets: prometheus.DefBuckets, // Or custom: []float64{0.0001, 0.001, 0.01, 0.1, 1},
+		},
+		nil,
+	)
 )
 
-func main() {
+func init() {
 	prometheus.MustRegister(mode)
+	prometheus.MustRegister(schedLatencies)
+}
+
+func pollRuntimeMetrics() {
+	ticker := time.NewTicker(time.Second)
+	samples := make([]metrics.Sample, 1)
+	samples[0].Name = "/sched/latencies:seconds"
+
+	for range ticker.C {
+		metrics.Read(samples)
+
+		for _, s := range samples {
+			if s.Value.Kind() == metrics.KindFloat64Histogram {
+				hist := s.Value.Float64Histogram()
+
+				schedLatencies.Reset()
+
+				totalCount := float64(len(hist.Counts))
+				for i, count := range hist.Counts {
+					if count > 0 {
+						sampleCount := float64(count) / totalCount
+						for j := 0; j < int(sampleCount); j++ {
+							schedLatencies.With(nil).Observe(hist.Buckets[i])
+						}
+					}
+				}
+				break
+			}
+		}
+	}
+}
+
+func main() {
+	go pollRuntimeMetrics()
 
 	// HTTP endpoints to trigger patterns
 	http.HandleFunc("/leak-goroutines", leakGoroutines)
@@ -30,6 +73,7 @@ func main() {
 	http.HandleFunc("/memory-growth", memoryGrowth)
 	http.HandleFunc("/alloc-churn", allocChurn)
 	http.HandleFunc("/cpu-blocking", cpuBlocking)
+	http.HandleFunc("/syscall-pressure", syscallPressure)
 
 	http.Handle("/metrics", promhttp.Handler())
 
@@ -61,10 +105,10 @@ func gcPressure(w http.ResponseWriter, _ *http.Request) {
 
 	go func() {
 		for {
-			for i := 0; i < 50_000; i++ {
-				_ = make([]byte, 1024) // short-lived garbage
+			for i := 0; i < 500_000; i++ {
+				_ = make([]byte, 1024*1024) // short-lived garbage
 			}
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 
@@ -102,7 +146,7 @@ func allocChurn(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte("started allocation churn\n"))
 }
 
-// 5. Scheduler / CPU mismatch
+// 5. CPU block
 // curl localhost:8080/cpu-blocking
 func cpuBlocking(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("cpu_blocking").Set(1)
@@ -129,4 +173,21 @@ func cpuBlocking(w http.ResponseWriter, _ *http.Request) {
 	}()
 
 	w.Write([]byte("started CPU blocking\n"))
+}
+
+// 6. Syscall pressure
+func syscallPressure(w http.ResponseWriter, _ *http.Request) {
+	mode.WithLabelValues("syscall_pressure").Set(1)
+
+	go func() {
+		for i := 0; i < 1000; i++ { // Spawn 1000 blocking goroutines
+			go func() {
+				for { // Infinite loop per goroutine
+					time.Sleep(100 * time.Millisecond)
+				}
+			}()
+		}
+	}()
+
+	w.Write([]byte("started syscall thread pressure\n"))
 }

@@ -134,7 +134,7 @@
       },
       "id": 9,
       "panels": [],
-      "title": "Threads",
+      "title": "CPU",
       "type": "row"
     },
     {
@@ -439,12 +439,113 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 13
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum(rate(go_sched_latencies_seconds_bucket{job=~\"$job\"}[$__rate_interval])) by (le, instance))",
+          "instant": false,
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "go_goroutine_count"
+        }
+      ],
+      "title": "Scheduler",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 19
       },
       "id": 6,
       "panels": [],
@@ -518,7 +619,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 20
       },
       "id": 1,
       "options": {
@@ -632,7 +733,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 20
       },
       "id": 15,
       "options": {
@@ -658,7 +759,7 @@
           "editorMode": "code",
           "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\"}[$__rate_interval])\n",
           "instant": false,
-          "legendFormat": "heap {{instance}}",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
@@ -733,7 +834,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 20
       },
       "id": 3,
       "options": {
@@ -813,5 +914,5 @@
   "timezone": "browser",
   "title": "Go Runtime",
   "uid": "bdz8zo3962bcwd",
-  "version": 2
+  "version": 3
 }
