@@ -104,9 +104,9 @@ func gcPressure(w http.ResponseWriter, _ *http.Request) {
 	go func() {
 		for {
 			for i := 0; i < 500_000; i++ {
-				_ = make([]byte, 1024*1024) // short-lived garbage
+				_ = make([]byte, 1024*1024) // short-lived garbage, escapes to heap
 			}
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(time.Millisecond)
 		}
 	}()
 
@@ -148,14 +148,15 @@ func allocChurn(w http.ResponseWriter, _ *http.Request) {
 }
 
 // 5. Syscall pressure
+// curl localhost:8080/syscall-pressure
 func syscallPressure(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("syscall_pressure").Set(1)
 
 	go func() {
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 100_000; i++ {
 			go func() {
 				for {
-					time.Sleep(100 * time.Millisecond)
+					time.Sleep(20 * time.Millisecond)
 				}
 			}()
 		}
