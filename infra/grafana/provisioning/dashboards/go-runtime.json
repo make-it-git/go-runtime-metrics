@@ -169,7 +169,8 @@
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
-              "type": "linear"
+              "log": 2,
+              "type": "log"
             },
             "showPoints": "auto",
             "showValues": false,
@@ -764,7 +765,7 @@
           "refId": "A"
         }
       ],
-      "title": "Memory allocations",
+      "title": "Memory allocation rate",
       "type": "timeseries"
     },
     {
@@ -914,5 +915,5 @@
   "timezone": "browser",
   "title": "Go Runtime",
   "uid": "bdz8zo3962bcwd",
-  "version": 4
+  "version": 5
 }
