@@ -21,6 +21,7 @@
   "graphTooltip": 2,
   "id": 1,
   "links": [],
+  "liveNow": true,
   "panels": [
     {
       "datasource": {
@@ -804,7 +805,11 @@
     "from": "now-15m",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": [
+      "5s"
+    ]
+  },
   "timezone": "browser",
   "title": "Go Runtime",
   "uid": "bdz8zo3962bcwd",
