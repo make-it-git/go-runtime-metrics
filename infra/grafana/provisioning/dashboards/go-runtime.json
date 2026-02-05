@@ -87,7 +87,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
+        "w": 24,
         "x": 0,
         "y": 0
       },
@@ -201,8 +201,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
+        "h": 5,
+        "w": 24,
         "x": 0,
         "y": 7
       },
@@ -302,9 +302,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 7
+        "w": 24,
+        "x": 0,
+        "y": 12
       },
       "id": 11,
       "options": {
@@ -403,9 +403,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 7
+        "w": 24,
+        "x": 0,
+        "y": 18
       },
       "id": 14,
       "options": {
@@ -504,9 +504,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
+        "w": 24,
         "x": 0,
-        "y": 13
+        "y": 24
       },
       "id": 16,
       "options": {
@@ -546,7 +546,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 30
       },
       "id": 6,
       "panels": [],
@@ -618,9 +618,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
+        "w": 24,
         "x": 0,
-        "y": 20
+        "y": 31
       },
       "id": 1,
       "options": {
@@ -732,9 +732,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 20
+        "w": 24,
+        "x": 0,
+        "y": 37
       },
       "id": 15,
       "options": {
@@ -833,9 +833,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 20
+        "w": 24,
+        "x": 0,
+        "y": 43
       },
       "id": 3,
       "options": {
@@ -859,7 +859,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(go_gc_duration_seconds_sum{job=~\"$job\"}[5s]) / rate(go_gc_duration_seconds_count{job=~\"$job\"}[5s])",
+          "expr": "rate(go_gc_duration_seconds_sum{job=~\"$job\"}[$__rate_interval]) / rate(go_gc_duration_seconds_count{job=~\"$job\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -933,10 +933,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 26
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 49
       },
       "id": 17,
       "options": {
@@ -1005,7 +1005,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
