@@ -97,19 +97,21 @@ func leakGoroutines(w http.ResponseWriter, _ *http.Request) {
 }
 
 type Node struct {
-	next *Node
-	data []byte
+	a, b, c, d *Node
+	payload    [256]byte
 }
 
-func allocChain(n int) *Node {
-	var head *Node
+func allocGraph(n int) *Node {
+	var root *Node
 	for i := 0; i < n; i++ {
-		head = &Node{
-			next: head,
-			data: make([]byte, 1024),
+		root = &Node{
+			a: root,
+			b: root,
+			c: root,
+			d: root,
 		}
 	}
-	return head
+	return root
 }
 
 // 2. GC pause pressure (many short-lived allocations)
@@ -117,14 +119,21 @@ func allocChain(n int) *Node {
 func gcPressure(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("gc_pressure").Set(1)
 
-	var roots []*Node
+	var roots []*Node // moved to heap
 
 	go func() {
 		for {
-			roots = append(roots, allocChain(100_000))
-			if len(roots) > 10 {
-				roots = roots[:0]
+			for i := 0; i < 3_000; i++ {
+				roots = append(roots, allocGraph(200))
 			}
+
+			roots = roots[len(roots)/3:]
+		}
+	}()
+
+	go func() {
+		for {
+			_ = make([]byte, 1024*1024)
 		}
 	}()
 
@@ -139,7 +148,7 @@ func memoryGrowth(w http.ResponseWriter, _ *http.Request) {
 	var store [][]byte
 	go func() {
 		for {
-			store = append(store, make([]byte, 1_000_000)) // retained
+			store = append(store, make([]byte, 1_000_000)) // retained, escapes to heap
 			time.Sleep(500 * time.Millisecond)
 		}
 	}()
@@ -152,7 +161,7 @@ func memoryGrowth(w http.ResponseWriter, _ *http.Request) {
 func allocChurn(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("alloc_churn").Set(1)
 
-	var globalSink *[]byte
+	var globalSink *[]byte // moved to heap
 	_ = globalSink
 
 	go func() {
@@ -171,10 +180,10 @@ func syscallPressure(w http.ResponseWriter, _ *http.Request) {
 	mode.WithLabelValues("syscall_pressure").Set(1)
 
 	go func() {
-		for i := 0; i < 100_000; i++ {
+		for i := 0; i < 10_000; i++ {
 			go func() {
 				for {
-					time.Sleep(20 * time.Millisecond)
+					time.Sleep(time.Millisecond)
 				}
 			}()
 		}
